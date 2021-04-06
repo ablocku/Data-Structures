@@ -13,7 +13,7 @@ logging.basicConfig(
     format=u'[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
     level=logging.NOTSET)
 
-file_in = open('layers.jpg', 'rb')
+file_in = open('cutu.jpg', 'rb')
 
 def connect(sock, adresa_receptor):
     '''
@@ -157,7 +157,7 @@ def main():
 
     ip_receptor = '198.8.0.2'
     port_receptor = 10000
-    fisier = "layers.jpg"
+    fisier = "cutu.jpg"
 
     adresa_receptor = (ip_receptor, port_receptor)
     print(adresa_receptor)
