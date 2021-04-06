@@ -44,13 +44,13 @@ def main():
     sequencer=[]
     spf=0
     while True and not (spf & 0b001):
-        logging.info('Asteptam mesaje...')
+        logging.info('Waiting for someone...')
         while not data:
             try:
                 data, address = sock.recvfrom(MAX_SEGMENT+8)
                 print(address)
             except socket.timeout as e:
-                print("N am primit nimic,incerc iar")
+                print("Nothing received, trying again")
         header = data[:8]
         #TODO: pentru fiecare mesaj primit
         #1. verificam checksum
@@ -90,7 +90,7 @@ def main():
                 if (spf & 0b001):
                     break
             except:
-                print("Nu putem mesaje noi pt ca n am primit confirmare")
+                print("Confirmation not received") #deci nu putem primi mesaje noi
     fisier.close()
 
             

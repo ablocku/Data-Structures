@@ -104,4 +104,4 @@ def verifica_checksum(octeti):
 if __name__ == "__main__":
     compara_endianness(356)
     create_header_emitator(1,0)
-    #print(verifica_checksum())
+    

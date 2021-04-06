@@ -5,7 +5,7 @@ import socket
 import logging
 import sys
 import random
-from threading import Thread
+#from threading import Thread
 import concurrent.futures
 import queue
 import traceback
@@ -35,13 +35,13 @@ def connect(sock, adresa_receptor):
         sock.sendto(mesaj, adresa_receptor)
         try:
             data, server = sock.recvfrom(MAX_SEGMENT)
-            print("Primit confirmare, updatez ack")
+            print("Confirmation: received ---> updating ack")
             ack_nr, checksum, window = parse_header_receptor(data)
             print(ack_nr)
         except socket.timeout as e:
-            print("N-am primit confirmarea,mai trimit odt")
-    #if verifica_checksum(data) is False:
-    #    return -1, -1
+            print("Confirmation: not received ---> resending")
+    if verifica_checksum(data) is False:
+        return -1, -1
     logging.info('Ack Nr: "%d"', ack_nr)
     logging.info('Checksum: "%d"', checksum)
     logging.info('Window: "%d"', window)
@@ -68,19 +68,19 @@ def finalize(sock, adresa_receptor, seq_nr):
     while ack_nr!=seq_nr+1:
         sock.sendto(mesaj, adresa_receptor)
         print("Sequence number:",seq_nr)
-        print("Incerc sa trimit.")
+        print("Sending...")
         try:
-            print("Astept confirmarea ca a primit receptorul")
+            print("Waiting confirmation from receptor")
             data, server = sock.recvfrom(MAX_SEGMENT)
-            print("Primit confirmare, updatez ack")
+            print("Confirmation: received ---> updating ack")
             ack_nr, checksum, window = parse_header_receptor(data)
             print(ack_nr)
             break
         except socket.timeout as e:
-            print("N-am primit confirmarea,mai trimit odt")
-    print("FINALIZAT VIATZA")
-    #if verifica_checksum(data) is False:
-    #    return -1, -1
+            print("Confirmation: not received ---> resending")
+    print("Done!")
+    if verifica_checksum(data) is False:
+        return -1, -1
     logging.info('Ack Nr: "%d"', ack_nr)
     logging.info('Checksum: "%d"', checksum)
     logging.info('Window: "%d"', window)
@@ -116,8 +116,8 @@ def send(sock, adresa_receptor, seq_nr, window, octeti_payload):
     ack_nr=seq_nr_curent
     sock.sendto(mesaj, adresa_receptor)
 
-    #if verifica_checksum(data) is False:
-    #    return -1, -1
+    if verifica_checksum(data) is False:
+       return -1, -1
     '''
     logging.info('Ack Nr: "%d"', ack_nr)
     logging.info('Checksum: "%d"', checksum)
@@ -169,7 +169,7 @@ def main():
     window=0
     try:
         ack_nr, window = connect(sock, adresa_receptor)
-        print("Am termint connectu")
+        print("Connected")
         ## TODO: send trebuie sa trimită o fereastră de window segmente
         # până primșete confirmarea primirii tuturor segmentelor
         lista_teoretic=[]
@@ -178,14 +178,13 @@ def main():
         segmente=[]
         q=queue.Queue()
         segment=1
-        print("Window initial:",window)
+        print("Initial window: ",window)
         ack_nr_initial=ack_nr
 
         ack=0
         window_real=window
         while (segment):
             while (len(lista_segmente_ack)<window_real and segment):
-                #print("Window mai mare decat cate am, mai citesc segmente. Window=",window_real,"Lungime segmente:",len(lista_segmente_ack))
                 segment = next(citeste_segment(file_in))
                 if lista_segmente_ack:
                     ack_teoretic=lista_segmente_ack[-1][1]+len(segment)
@@ -195,37 +194,30 @@ def main():
             for i in range (len(lista_segmente_ack)):
                 ack_nr,window=send(sock,adresa_receptor,lista_segmente_ack[i][1],window,lista_segmente_ack[i][0])
             while (ack!=lista_segmente_ack[0][1]):
-                print("N-am primit confirmare real, astept iar pentru",lista_segmente_ack[0][1])
+                print("No confirmation, waiting: ",lista_segmente_ack[0][1])
                 t=Thread(target=listen,args=(sock,q))
                 t.start()
                 ack,window=q.get()
-                print("Trimit iar atatea:",window_real)
+                print("Sending: ",window_real)
                 for i in range (len(lista_segmente_ack)):
                     ack_nr,window=send(sock,adresa_receptor,lista_segmente_ack[i][1],window,lista_segmente_ack[i][0])
-            #print("Primit confirmare pt!!!!!!!!!",lista_segmente_ack[0][1])
-            print("Lista cu ack")
+            print("ACK_LIST: ")
             for e in lista_segmente_ack:
                 print(e[1])
             window_real=window
             ack_nr_initial=ack_nr_initial+len(lista_segmente_ack[0][0])
             lista_segmente_ack.pop(0)
-            print("Primit window nou:",window)
-        print("Terminat segmente, trimit ce a mai ramas")
-        '''
-        while (lista_segmente_ack):
-            for i in range (len(lista_segmente_ack)):
-               ack_nr,window=send(sock,adresa_receptor,lista_segmente_ack[i][1],window,lista_segmente_ack[i][0])
-            lista_segmente_ack.pop(0)   
-        '''
+            print("NEW_WINDOW received:",window)
+        print("Sending scraps...")
         while (lista_segmente_ack):
             for i in range (len(lista_segmente_ack)):
                ack_nr,window=send(sock,adresa_receptor,lista_segmente_ack[i][1],window,lista_segmente_ack[i][0])
             while (ack!=lista_segmente_ack[0][1]):
-                print("N-am primit confirmare real, astept iar pentru",lista_segmente_ack[0][1])
+                print("No confirmation, waiting: ",lista_segmente_ack[0][1])
                 t=Thread(target=listen,args=(sock,q))
                 t.start()
                 ack,window=q.get()
-                print("Trimit iar cu fereastra de:",window)
+                print("Sending: ",window)
                 for i in range (len(lista_segmente_ack)):
                     ack_nr,window=send(sock,adresa_receptor,lista_segmente_ack[i][1],window,lista_segmente_ack[i][0])
             lista_segmente_ack.pop(0)
